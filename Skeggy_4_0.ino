@@ -49,9 +49,15 @@ int data2;  //Вперед назад
 int data3;  //Вперед назад
 int data4;  //Влево вправо
 //int data5;  //Объявлена в приложении
-int data6;  //Переворот
-int data7;  //Подъем и спуск по наклонной
-int data8;  //Задняя ось
+int data6;  //Подъем и спуск по наклонной
+int data7;  //
+int data8;  //Лестница
+int data9;  //Переворот
+int data10;
+int data11;
+int data12;
+
+
 
 
 //Всякие переменные
@@ -150,6 +156,10 @@ void loop() {
   data6 = ppm.latestValidChannelValue(6, 0);
   data7 = ppm.latestValidChannelValue(7, 0);
   data8 = ppm.latestValidChannelValue(8, 0);
+  // data9 = ppm.latestValidChannelValue(9, 0);
+  // data10 = ppm.latestValidChannelValue(10, 0);
+  // data11 = ppm.latestValidChannelValue(11, 0);
+  // data12 = ppm.latestValidChannelValue(12, 0);
 
   if (data2 > 1550 || data2 < 1450 || data1 > 1550 || data1 < 1450)  //движение
   {
@@ -183,31 +193,37 @@ void loop() {
     }
   } else {
     if (data1 > 1450 && data1 < 1550) {  //стоп
-      motorR.smoothTick(0);
-      motorL.smoothTick(0);
+      //motorR.smoothTick(0);
+      //motorL.smoothTick(0);
+      digitalWrite(MOTOR_A1_PIN, HIGH);
+      digitalWrite(MOTOR_B1_PIN, HIGH);
+      digitalWrite(MOTOR_A2_PIN, HIGH);
+      digitalWrite(MOTOR_B2_PIN, HIGH);
+      analogWrite(PWM_MOTOR_1, 0);
+      analogWrite(PWM_MOTOR_2, 0);
       //Serial.println("Стоп");
     }
   }
 
-  if (data6 >= 1900 && check == 0)  //переворот
+  if (data7 >= 1900 && check == 0)  //переворот
   {
     check = 1;
     delay(100);
     overturn_motor.smoothTick(-255);
-    delay(3000);
+    delay(1500);
     overturn_motor.smoothTick(0);
     delay(300);
     overturn_motor.smoothTick(255);
-    delay(1000);
+    delay(600);
     overturn_motor.smoothTick(0);
     delay(100);
 
-  } else if (data6 <= 1800 && check == 1) {
+  } else if (data7 <= 1800 && check == 1) {
     check = 0;
     overturn_motor.smoothTick(0);
   }
 
-  if (data7 >= 1400 && data7 <=1600)  //подъем по наклонной
+  if (data6 >= 1400 && data6 <=1600)  //подъем по наклонной
     {
       if (millis() - tmr >= 11) 
       {  // таймер на 11 мс (на всякий случай)
@@ -237,14 +253,14 @@ void loop() {
           if (millis() - myTimer1 >= 200) 
             { 
               ObliqueUp();
-              data7 = ppm.latestValidChannelValue(7, 0);
+              data6 = ppm.latestValidChannelValue(7, 0);
               myTimer1 = millis();
             }
         }
     }
 
 
-  if (data7 >= 1400 && data7 <=1600)  //спуск по наклонной
+  if (data6 >= 1400 && data6 <=1600)  //спуск по наклонной
   {
     if (millis() - tmr >= 11) {  // таймер на 11 мс (на всякий случай)
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
@@ -272,14 +288,14 @@ void loop() {
       if (millis() - myTimer1 >= 200) 
       { 
         ObliqueDown();
-        data7 = ppm.latestValidChannelValue(7, 0);
+        data6 = ppm.latestValidChannelValue(7, 0);
         myTimer1 = millis();
       }
     }
   }
 
 
-  if (data7 >= 1900)  //быстрый подъем по наклонной
+  if (data6 >= 1900)  //быстрый подъем по наклонной
   {
     if (millis() - tmr >= 11) {  // таймер на 11 мс (на всякий случай)
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
@@ -307,7 +323,7 @@ void loop() {
       if (millis() - myTimer1 >= 200) 
       { 
         ObliqueUpFast();
-        data7 = ppm.latestValidChannelValue(7, 0);
+        data6 = ppm.latestValidChannelValue(7, 0);
         myTimer1 = millis();
       }
     }
@@ -345,7 +361,7 @@ if (data3 > 1900) {
     }
     main_servo.write(num);
 
-if (data8 >= 1400 && data8 <=1600) {
+if (data6 >= 1400 && data6 <=1600) {
   if (data4 >= 1600) {
     //if(millis() - timer1 > 1)
     //{
