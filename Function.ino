@@ -228,7 +228,6 @@ void ladder()
 }
 
 
-
 void ObliqueUp() 
 {
   motorR.smoothTick(-135);
@@ -244,4 +243,55 @@ void ObliqueUpFast()
 {
   motorR.smoothTick(-200);
   motorL.smoothTick(-200);
+}
+
+void Autoline()
+{
+  // считывание информации с пинов
+  Datinfo_AL1 = digitalRead(Dat_L1);
+  Datinfo_AR1 = digitalRead(Dat_R1);
+  autoflag = 0;
+  if (data5 == 2000)
+  {
+    if (Datinfo_AL1 == Datinfo_AR1) // вперед
+    {
+      if (millis() - timingAW > 150)
+      {
+        nowToward = millis();
+        while (millis() - nowToward < 50) {
+          motorR.smoothTick(-70);
+          motorL.smoothTick(-70);
+          timingAW = millis();
+        }
+      }
+    }
+    else
+    {
+      if (Datinfo_AR1 == 0) // вправо
+      {
+        if (millis() - timingAR > 100)
+        {
+          nowRight = millis();
+          while (millis() - nowRight < 50) {
+            motorR.smoothTick(60);
+            motorL.smoothTick(-60);
+            timingAR = millis();
+          }
+        }
+      }
+
+      if (Datinfo_AL1 == 0) // влево
+      {
+        if (millis() - timingAL > 100)
+        {
+          nowLeft = millis();
+          while (millis () - nowLeft < 50) {
+            motorR.smoothTick(-60);
+            motorL.smoothTick(60);
+            timingAL = millis();
+          }
+        }
+      }
+    }
+  }
 }

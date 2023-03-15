@@ -140,6 +140,9 @@ void setup() {
 
 void loop() {
 
+  int serv1 = map (data3, 1000, 2000, 0, 180);
+  servo1.write(serv1);
+
     //Вывод значений со всех каналов
   for (int channel = 1; channel <= channelAmount; ++channel) {
       unsigned long value = ppm.latestValidChannelValue(channel, 0);
