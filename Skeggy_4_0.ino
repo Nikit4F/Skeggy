@@ -5,19 +5,33 @@
 #include "MPU6050_6Axis_MotionApps_V6_12.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "MPU6050.h"
-#include "Autoline.h"
+#include "Skeggy.h"
 #include "Servo.h"
 MPU6050 mpu;
 
 //Константы
-#define MIN_DUTY 0  //минимальное значение которое подается на моторы
+const int MIN_DUTY = 0;  //минимальное значение которое подается на моторы
 
 //Пины
 const byte overturn_Apin = 40;  //Пин направления А переворота
 const byte overturn_Bpin = 42;  //Пин направления B переворота
 const byte overturn_pwm = 44; //ШИМ пин
-int echoPin = 26;// this pin recive echo, reflected audio signal
-int trigPin = 24;// this pin generate audio signal
+int echoPin = 26; // this pin recive echo, reflected audio signal
+int trigPin = 24; // this pin generate audio signal
+int Dat_L1 = 2; //Пин левого ИК датчика
+int Dat_R1 = 3; //Пин правого ИК датчика
+
+//Мотор 1
+const int MOTOR_A1_PIN = 7;
+const int MOTOR_B1_PIN = 8;
+
+//Мотор 2
+const int MOTOR_A2_PIN = 4;
+const int MOTOR_B2_PIN = 9;
+
+//ШИМ моторов
+const int PWM_MOTOR_1 = 5;
+const int PWM_MOTOR_2 = 6;
 
 //Таймеры
 int myTimer1 = millis();
@@ -33,6 +47,13 @@ int timer1 = millis();
 int timer2 = millis();
 int timer3 = millis();
 int timer4 = millis();
+unsigned long timingAL = millis(); //поворот влево
+unsigned long timingAR = millis(); //поворот вправо
+unsigned long timingAB = millis(); //проезд через черную линию
+unsigned long timingAW = millis(); //белый фон
+uint32_t nowToward = millis();
+uint32_t nowLeft = millis();
+uint32_t nowRight = millis();
 
 //MPU6050 переменные
 float angleX = 0;
@@ -48,29 +69,27 @@ int data1;  //Вправо влево
 int data2;  //Вперед назад
 int data3;  //Вперед назад
 int data4;  //Влево вправо
-//int data5;  //Объявлена в приложении
+int data5;  //Автолиния
 int data6;  //Подъем и спуск по наклонной
-int data7;  //
+int data7;  //Переворот
 int data8;  //Лестница
-int data9;  //Переворот
-int data10;
-int data11;
-int data12;
-
-
-
 
 //Всякие переменные
 int speed1; 
 int speed2;
 int Axis_rotation_angle ;
 bool check = 0;                     //флажок переворота
-bool autoline_flag = 1;                     //флажок автолинии
+bool autoline_flag = 1;             //флажок автолинии
 int angl = 180;
 int num = 90;
 int duration;//variable for delay
 int cm;//variable for distance
 bool flag = 0;
+int Datinfo_AL1 = 0;  //Данные с левого ИК датчика
+int Datinfo_AR1 = 0;  //Данные с правого ИК датчика
+int autoflag;
+int interruptPin = 19; //Пин PPMReader
+int channelAmount = 8; //Ожидаемое число каналов
 
 //Сервоприводы
 Servo grab_servo;
@@ -78,13 +97,17 @@ Servo main_servo;
 Servo servo1;
 Servo servo2;
 
-//Инициализация драйверов и серв
+//Инициализация драйверов
 GMotor overturn_motor(DRIVER3WIRE, overturn_Apin, overturn_Bpin, overturn_pwm, HIGH);
-//Servo servo1;
-//Servo servo2;
+GMotor motorL(DRIVER3WIRE, MOTOR_A1_PIN, MOTOR_B1_PIN, PWM_MOTOR_1, HIGH);
+GMotor motorR(DRIVER3WIRE, MOTOR_A2_PIN, MOTOR_B2_PIN, PWM_MOTOR_2, HIGH);
+
+//Инициализируем PPMReader на 19 пин с 8 каналами
+PPMReader ppm(interruptPin, channelAmount);
 
 
-void setup() {
+void setup() 
+{
   //Подключение серв
   Serial.begin(57600);
   pinMode(32, OUTPUT);
@@ -135,7 +158,6 @@ void setup() {
   mpu.initialize();
   mpu.dmpInitialize();
   mpu.setDMPEnabled(true);
-
 }
 
 void loop() {
@@ -159,10 +181,6 @@ void loop() {
   data6 = ppm.latestValidChannelValue(6, 0);
   data7 = ppm.latestValidChannelValue(7, 0);
   data8 = ppm.latestValidChannelValue(8, 0);
-  // data9 = ppm.latestValidChannelValue(9, 0);
-  // data10 = ppm.latestValidChannelValue(10, 0);
-  // data11 = ppm.latestValidChannelValue(11, 0);
-  // data12 = ppm.latestValidChannelValue(12, 0);
 
   if (data2 > 1550 || data2 < 1450 || data1 > 1550 || data1 < 1450)  //движение
   {
@@ -194,8 +212,11 @@ void loop() {
       motorL.smoothTick(-speed1);
       Serial.println("Влево");
     }
-  } else {
-    if (data1 > 1450 && data1 < 1550) {  //стоп
+  } 
+  else 
+  {
+    if (data1 > 1450 && data1 < 1550) //стоп
+    {
       //motorR.smoothTick(0);
       //motorL.smoothTick(0);
       digitalWrite(MOTOR_A1_PIN, HIGH);
@@ -211,81 +232,31 @@ void loop() {
   if (data7 >= 1900 && check == 0)  //переворот
   {
     check = 1;
-    delay(100);
-    overturn_motor.smoothTick(-255);
-    delay(1500);
-    overturn_motor.smoothTick(0);
-    delay(300);
-    overturn_motor.smoothTick(255);
-    delay(600);
-    overturn_motor.smoothTick(0);
-    delay(100);
-
-  } else if (data7 <= 1800 && check == 1) {
+    overturn();
+  } 
+  else if (data7 <= 1800 && check == 1) 
+  {
     check = 0;
     overturn_motor.smoothTick(0);
   }
 
   if (data6 >= 1400 && data6 <=1600)  //подъем по наклонной
-    {
-      if (millis() - tmr >= 11) 
-      {  // таймер на 11 мс (на всякий случай)
-        if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) 
-          {
-            // переменные для расчёта (ypr можно вынести в глобал)
-          Quaternion q;
-          VectorFloat gravity;
-
-          // расчёты
-          mpu.dmpGetQuaternion(&q, fifoBuffer);
-          mpu.dmpGetGravity(&gravity, &q);
-          mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-          // выводим результат в радианах (-3.14, 3.14)
-          Serial.print(degrees(ypr[0])); // вокруг оси Z
-          Serial.print('\t');
-          Serial.print(degrees(ypr[1])); // вокруг оси Y
-          Serial.print('\t');
-          Serial.print(degrees(ypr[2])); // вокруг оси X
-          Serial.println();
-          // для градусов можно использовать degrees()
-          tmr = millis();  // сброс таймера
+  {
+    mpuStart();
+    if (degrees(ypr[1]) < -10)
+     {
+       if (millis() - myTimer1 >= 200) 
+        { 
+          ObliqueUp();
+          data6 = ppm.latestValidChannelValue(7, 0);
+          myTimer1 = millis();
         }
       }
-      if (degrees(ypr[1]) < -10)
-        {
-          if (millis() - myTimer1 >= 200) 
-            { 
-              ObliqueUp();
-              data6 = ppm.latestValidChannelValue(7, 0);
-              myTimer1 = millis();
-            }
-        }
-    }
-
+  }
 
   if (data6 >= 1400 && data6 <=1600)  //спуск по наклонной
   {
-    if (millis() - tmr >= 11) {  // таймер на 11 мс (на всякий случай)
-    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
-      // переменные для расчёта (ypr можно вынести в глобал)
-      Quaternion q;
-      VectorFloat gravity;
-
-      // расчёты
-      mpu.dmpGetQuaternion(&q, fifoBuffer);
-      mpu.dmpGetGravity(&gravity, &q);
-      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-      // выводим результат в радианах (-3.14, 3.14)
-      /*Serial.print(degrees(ypr[0])); // вокруг оси Z
-      Serial.print('\t');
-      Serial.print(degrees(ypr[1])); // вокруг оси Y
-      Serial.print('\t');
-      Serial.print(degrees(ypr[2])); // вокруг оси X
-      Serial.println();*/
-      // для градусов можно использовать degrees()
-      tmr = millis();  // сброс таймера
-    }
-  }
+    mpuStart();
   if (degrees(ypr[1]) > 10)
   {
       if (millis() - myTimer1 >= 200) 
@@ -297,30 +268,9 @@ void loop() {
     }
   }
 
-
   if (data6 >= 1900)  //быстрый подъем по наклонной
   {
-    if (millis() - tmr >= 11) {  // таймер на 11 мс (на всякий случай)
-    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
-      // переменные для расчёта (ypr можно вынести в глобал)
-      Quaternion q;
-      VectorFloat gravity;
-
-      // расчёты
-      mpu.dmpGetQuaternion(&q, fifoBuffer);
-      mpu.dmpGetGravity(&gravity, &q);
-      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-      // выводим результат в радианах (-3.14, 3.14)
-      Serial.print(degrees(ypr[0])); // вокруг оси Z
-      Serial.print('\t');
-      Serial.print(degrees(ypr[1])); // вокруг оси Y
-      Serial.print('\t');
-      Serial.print(degrees(ypr[2])); // вокруг оси X
-      Serial.println();
-      // для градусов можно использовать degrees()
-      tmr = millis();  // сброс таймера
-    }
-  }
+    mpuStart();
   if (degrees(ypr[1]) < -15)
   {
       if (millis() - myTimer1 >= 200) 
@@ -345,100 +295,10 @@ void loop() {
   {
     autoline_flag = 1;
   }
-//управление манипулятором
-if (data3 > 1900) {
-      //if(millis() - timer3 > 200)
-      //{
-          num++;
-          num = constrain(num, 10, 110);
-          //timer3 = millis();
-      //}
-    }
-    if (data3 < 1100) {
-      //if(millis() - timer4 > 200)
-      //{
-          num--;
-          num = constrain(num, 10, 110);
-          //timer4 = millis();
-      //}
-    }
-    main_servo.write(num);
-
-if (data6 >= 1400 && data6 <=1600) {
-  if (data4 >= 1600) {
-    //if(millis() - timer1 > 1)
-    //{
-      angl--;
-      angl = constrain(angl, 120, 175);
-      //timer1 = millis();
-      //}
-    }
-  if (data4 <= 1400) {
-    //if(millis() - timer2 > 1)
-      //{
-        angl++;
-        angl = constrain(angl, 120, 175);
-       // timer2 = millis();
-      //}
-    }
-  grab_servo.write(angl);
-  }
-  /*Serial.print(num);
-  Serial.print('\t');
-  Serial.println(angl);*/
 
   if(data8>1900)  //Запуск лестницы
 {
-  if (millis() - tmr >= 11) 
-      {  // таймер на 11 мс (на всякий случай)
-        if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) 
-          {
-            // переменные для расчёта (ypr можно вынести в глобал)
-          Quaternion q;
-          VectorFloat gravity;
-
-          // расчёты
-          mpu.dmpGetQuaternion(&q, fifoBuffer);
-          mpu.dmpGetGravity(&gravity, &q);
-          mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-          // выводим результат в радианах (-3.14, 3.14)
-          Serial.print(degrees(ypr[0])); // вокруг оси Z
-          Serial.print('\t');
-          Serial.print(degrees(ypr[1])); // вокруг оси Y
-          Serial.print('\t');
-          Serial.println(degrees(ypr[2])); // вокруг оси X
-          // для градусов можно использовать degrees()
-          tmr = millis();  // сброс таймера
-        }
-      }
-  digitalWrite(trigPin, LOW);//reset pin state. dont generate audio signal
-  delayMicroseconds(2);// waiting  decay
-  digitalWrite(trigPin, HIGH);//prepare to generate audio signal
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);//generate audio signal
-  duration = pulseIn(echoPin, HIGH);//recive echo. calculate delay time
-  cm = duration / 58;//calculate distance time. s=v*t v=340 m/s=1/29 m/mcs. andio signal travelled the distance to the site and back, dividing the result by 2.
-  //Serial.print(cm);
-  //Serial.println(" cm");
-  if (cm > 1 && cm < 9)
-  {
-    flag = 1;
-  }
-    if(flag == 1){
-      motorL.smoothTick(-115);
-      motorR.smoothTick(-115);
-      servo1.write(30);
-      servo2.write(60);
-    }
-
-    if(degrees(ypr[1]) < -59)
-    {
-      flag = 0;
-      motorL.smoothTick(0);
-      motorR.smoothTick(0);
-      servo1.write(180);
-      servo2.write(75);
-    }
+  ladder();
 }
 else 
 {
@@ -447,22 +307,3 @@ else
 }
 
 } //Конец лупа
-
-void ObliqueUp() 
-{
-  motorR.smoothTick(-135);
-  motorL.smoothTick(-135);
-}
-
-void ObliqueDown() 
-{
-  motorR.smoothTick(-30);
-  motorL.smoothTick(-30);
-}
-void ObliqueUpFast()
-{
-  motorR.smoothTick(-200);
-  motorL.smoothTick(-200);
-}
-
-
