@@ -15,11 +15,11 @@ const int MIN_DUTY = 0;  //минимальное значение которо�
 //Пины
 const byte overturn_Apin = 40;  //Пин направления А переворота
 const byte overturn_Bpin = 42;  //Пин направления B переворота
-const byte overturn_pwm = 44; //ШИМ пин
-int echoPin = 26; // this pin recive echo, reflected audio signal
-int trigPin = 24; // this pin generate audio signal
-int Dat_L1 = 2; //Пин левого ИК датчика
-int Dat_R1 = 3; //Пин правого ИК датчика
+const byte overturn_pwm = 44;   //ШИМ пин
+int echoPin = 26;               // this pin recive echo, reflected audio signal
+int trigPin = 24;               // this pin generate audio signal
+int Dat_L1 = 2;                 //Пин левого ИК датчика
+int Dat_R1 = 3;                 //Пин правого ИК датчика
 
 //Мотор 1
 const int MOTOR_A1_PIN = 7;
@@ -47,10 +47,10 @@ int timer1 = millis();
 int timer2 = millis();
 int timer3 = millis();
 int timer4 = millis();
-unsigned long timingAL = millis(); //поворот влево
-unsigned long timingAR = millis(); //поворот вправо
-unsigned long timingAB = millis(); //проезд через черную линию
-unsigned long timingAW = millis(); //белый фон
+unsigned long timingAL = millis();  //поворот влево
+unsigned long timingAR = millis();  //поворот вправо
+unsigned long timingAB = millis();  //проезд через черную линию
+unsigned long timingAW = millis();  //белый фон
 uint32_t nowToward = millis();
 uint32_t nowLeft = millis();
 uint32_t nowRight = millis();
@@ -59,7 +59,7 @@ uint32_t nowRight = millis();
 float angleX = 0;
 float angleY = 0;
 #define M_PI 3.14159265358979323846
-uint8_t fifoBuffer[45];  
+uint8_t fifoBuffer[45];
 static uint32_t tmr;
 float ypr[3];
 float constant_angle;
@@ -75,21 +75,21 @@ int data7;  //Переворот
 int data8;  //Лестница
 
 //Всякие переменные
-int speed1; 
+int speed1;
 int speed2;
-int Axis_rotation_angle ;
-bool check = 0;                     //флажок переворота
-bool autoline_flag = 1;             //флажок автолинии
+int Axis_rotation_angle;
+bool check = 0;          //флажок переворота
+bool autoline_flag = 1;  //флажок автолинии
 int angl = 180;
 int num = 90;
-int duration;//variable for delay
-int cm;//variable for distance
+int duration;  //variable for delay
+int cm;        //variable for distance
 bool flag = 0;
 int Datinfo_AL1 = 0;  //Данные с левого ИК датчика
 int Datinfo_AR1 = 0;  //Данные с правого ИК датчика
 int autoflag;
-int interruptPin = 19; //Пин PPMReader
-int channelAmount = 8; //Ожидаемое число каналов
+int interruptPin = 19;  //Пин PPMReader
+int channelAmount = 8;  //Ожидаемое число каналов
 
 //Сервоприводы
 Servo grab_servo;
@@ -106,8 +106,7 @@ GMotor motorR(DRIVER3WIRE, MOTOR_A2_PIN, MOTOR_B2_PIN, PWM_MOTOR_2, HIGH);
 PPMReader ppm(interruptPin, channelAmount);
 
 
-void setup() 
-{
+void setup() {
   //Подключение серв
   Serial.begin(57600);
   pinMode(32, OUTPUT);
@@ -122,15 +121,15 @@ void setup()
   servo2.attach(33);
   servo1.write(30);
   servo2.write(60);
-  
+
   //Режим пинов
   pinMode(overturn_Apin, OUTPUT);
   pinMode(overturn_Apin, OUTPUT);
-  pinMode(overturn_pwm, OUTPUT);  
-  pinMode(Dat_L1 , INPUT);
-  pinMode(Dat_R1 , INPUT);
-  pinMode(trigPin, OUTPUT);//configurate trigPin as output
-  pinMode(echoPin, INPUT);//configurate echoPin as input
+  pinMode(overturn_pwm, OUTPUT);
+  pinMode(Dat_L1, INPUT);
+  pinMode(Dat_R1, INPUT);
+  pinMode(trigPin, OUTPUT);  //configurate trigPin as output
+  pinMode(echoPin, INPUT);   //configurate echoPin as input
 
   //Режим определения направления мотора
   motorR.setMode(AUTO);
@@ -162,15 +161,15 @@ void setup()
 
 void loop() {
 
-  int serv1 = map (data3, 1000, 2000, 0, 180);
-  servo1.write(serv1);
+  //int serv1 = map (data3, 1000, 2000, 0, 180);
+  //servo1.write(serv1);
 
-    //Вывод значений со всех каналов
-  for (int channel = 1; channel <= channelAmount; ++channel) {
-      unsigned long value = ppm.latestValidChannelValue(channel, 0);
-      Serial.print(String(value) + " ");
-    }
-    Serial.println();
+  //Вывод значений со всех каналов
+  // for (int channel = 1; channel <= channelAmount; ++channel) {
+  //     unsigned long value = ppm.latestValidChannelValue(channel, 0);
+  //     Serial.print(String(value) + " ");
+  //   }
+  //   Serial.println();
 
   //Считывание значений с каналов
   data1 = ppm.latestValidChannelValue(1, 0);
@@ -212,19 +211,17 @@ void loop() {
       motorL.smoothTick(-speed1);
       Serial.println("Влево");
     }
-  } 
-  else 
-  {
-    if (data1 > 1450 && data1 < 1550) //стоп
+  } else {
+    if (data1 > 1450 && data1 < 1550 && data6 < 1100 && data5 < 1100 && data7 < 1100)  //стоп
     {
       //motorR.smoothTick(0);
       //motorL.smoothTick(0);
-      digitalWrite(MOTOR_A1_PIN, HIGH);
-      digitalWrite(MOTOR_B1_PIN, HIGH);
-      digitalWrite(MOTOR_A2_PIN, HIGH);
-      digitalWrite(MOTOR_B2_PIN, HIGH);
-      analogWrite(PWM_MOTOR_1, 0);
-      analogWrite(PWM_MOTOR_2, 0);
+      // digitalWrite(MOTOR_A1_PIN, HIGH);
+      // digitalWrite(MOTOR_B1_PIN, HIGH);
+      // digitalWrite(MOTOR_A2_PIN, HIGH);
+      // digitalWrite(MOTOR_B2_PIN, HIGH);
+      // analogWrite(PWM_MOTOR_1, 0);
+      // analogWrite(PWM_MOTOR_2, 0);
       //Serial.println("Стоп");
     }
   }
@@ -233,52 +230,37 @@ void loop() {
   {
     check = 1;
     overturn();
-  } 
-  else if (data7 <= 1800 && check == 1) 
-  {
+  } else if (data7 <= 1800 && check == 1) {
     check = 0;
     overturn_motor.smoothTick(0);
   }
 
-  if (data6 >= 1400 && data6 <=1600)  //подъем по наклонной
-  {
-    mpuStart();
-    if (degrees(ypr[1]) < -10)
-     {
-       if (millis() - myTimer1 >= 200) 
-        { 
-          ObliqueUp();
-          data6 = ppm.latestValidChannelValue(7, 0);
-          myTimer1 = millis();
-        }
-      }
-  }
 
-  if (data6 >= 1400 && data6 <=1600)  //спуск по наклонной
-  {
-    mpuStart();
-  if (degrees(ypr[1]) > 10)
-  {
-      if (millis() - myTimer1 >= 200) 
-      { 
-        ObliqueDown();
-        data6 = ppm.latestValidChannelValue(7, 0);
-        myTimer1 = millis();
-      }
+   if (data6 >= 1900)  //спуск по наклонной
+   {
+     mpuStart();
+     if (degrees(ypr[2]) < -15) {
+       if (millis() - myTimer1 >= 200) {
+         ObliqueDown();
+         data6 = ppm.latestValidChannelValue(6, 0);
+         myTimer1 = millis();
+       }
+     } else {
+       stopMotors();
+     }
     }
-  }
 
-  if (data6 >= 1900)  //быстрый подъем по наклонной
+  if (data6 >= 1400 && data6 <= 1600)  //быстрый подъем по наклонной
   {
     mpuStart();
-  if (degrees(ypr[1]) < -15)
-  {
-      if (millis() - myTimer1 >= 200) 
-      { 
+    if (degrees(ypr[2]) > 15) {
+      if (millis() - myTimer1 >= 200) {
         ObliqueUpFast();
-        data6 = ppm.latestValidChannelValue(7, 0);
+        data6 = ppm.latestValidChannelValue(6, 0);
         myTimer1 = millis();
       }
+    } else {
+      stopMotors();
     }
   }
 
@@ -296,14 +278,12 @@ void loop() {
     autoline_flag = 1;
   }
 
-  if(data8>1900)  //Запуск лестницы
-{
-  ladder();
-}
-else 
-{
-  servo1.write(0);
-  servo2.write(60);
-}
+  if (data8 > 1900)  //Запуск лестницы
+  {
+    ladder();
+  } else {
+    servo1.write(0);
+    servo2.write(60);
+  }
 
-} //Конец лупа
+}  //Конец лупа

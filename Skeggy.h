@@ -13,4 +13,5 @@ void ObliqueUp();
 void ObliqueDown();
 void ObliqueUpFast();
 void Autoline();
+void stopMotors();
 #endif

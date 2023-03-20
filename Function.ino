@@ -1,5 +1,6 @@
 void overturn()  //Функция переворота
 {
+  Serial.println("переворот");
   delay(100);
   overturn_motor.smoothTick(-255);
   delay(1500);
@@ -63,7 +64,7 @@ void ladder()  //Функция подъема по лестнице
     goLadder();
   }
 
-  if (degrees(ypr[1]) < -59) {
+  if (degrees(ypr[2]) > 59) {
     flag = 0;
     upLadder();
   }
@@ -87,19 +88,32 @@ void upLadder() //Функция распрямления хвоста в реж
 
 void ObliqueUp()  //Функция поднятия наверх по наклонной с обычной скоростью
 {
-  motorR.smoothTick(-135);
-  motorL.smoothTick(-135);
+  Serial.println("Наклонная");
+  motorR.smoothTick(-150);
+  motorL.smoothTick(-150);
 }
 
 void ObliqueDown()  //Функция спуска вниз по наклонной с обычной скоростью
 {
+  Serial.println("Наклоная вниз");
   motorR.smoothTick(-30);
   motorL.smoothTick(-30);
 }
 void ObliqueUpFast()  //Функция поднятия наверх по наклонной с быстрой скоростью
 {
+  Serial.println("Наклонная быстро");
   motorR.smoothTick(-200);
   motorL.smoothTick(-200);
+}
+
+void stopMotors()
+{
+  digitalWrite(MOTOR_A1_PIN, HIGH);
+  digitalWrite(MOTOR_B1_PIN, HIGH);
+  digitalWrite(MOTOR_A2_PIN, HIGH);
+  digitalWrite(MOTOR_B2_PIN, HIGH);
+  analogWrite(PWM_MOTOR_1, 0);
+  analogWrite(PWM_MOTOR_2, 0);
 }
 
 void Autoline() //Функция запуска автолинии
