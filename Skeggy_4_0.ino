@@ -170,6 +170,7 @@ void loop() {
   //     Serial.print(String(value) + " ");
   //   }
   //   Serial.println();
+  //Serial.println(ultrasonicSensorStart(trigPin, echoPin));
 
   //Считывание значений с каналов
   data1 = ppm.latestValidChannelValue(1, 0);
@@ -212,17 +213,17 @@ void loop() {
       Serial.println("Влево");
     }
   } else {
-    if (data1 > 1450 && data1 < 1550 && data6 < 1100 && data5 < 1100 && data7 < 1100)  //стоп
+    if (data1 > 1450 && data1 < 1550)  //стоп
     {
-      //motorR.smoothTick(0);
-      //motorL.smoothTick(0);
+      motorR.smoothTick(0);
+      motorL.smoothTick(0);
       // digitalWrite(MOTOR_A1_PIN, HIGH);
       // digitalWrite(MOTOR_B1_PIN, HIGH);
       // digitalWrite(MOTOR_A2_PIN, HIGH);
       // digitalWrite(MOTOR_B2_PIN, HIGH);
       // analogWrite(PWM_MOTOR_1, 0);
       // analogWrite(PWM_MOTOR_2, 0);
-      //Serial.println("Стоп");
+      Serial.println("Стоп");
     }
   }
 
@@ -246,21 +247,23 @@ void loop() {
          myTimer1 = millis();
        }
      } else {
-       stopMotors();
+       motorR.smoothTick(0);
+       motorL.smoothTick(0);
      }
     }
 
-  if (data6 >= 1400 && data6 <= 1600)  //быстрый подъем по наклонной
+  if (data6 >= 1400 && data6 <= 1600)  //быстрый подъем по наклоннойß
   {
     mpuStart();
     if (degrees(ypr[2]) > 15) {
       if (millis() - myTimer1 >= 200) {
-        ObliqueUpFast();
+        ObliqueUp();
         data6 = ppm.latestValidChannelValue(6, 0);
         myTimer1 = millis();
       }
     } else {
-      stopMotors();
+      motorR.smoothTick(0);
+      motorL.smoothTick(0);
     }
   }
 

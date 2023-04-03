@@ -64,7 +64,7 @@ void ladder()  //Функция подъема по лестнице
     goLadder();
   }
 
-  if (degrees(ypr[2]) > 59) {
+  if (degrees(ypr[2]) > 55) {
     flag = 0;
     upLadder();
   }
@@ -121,40 +121,34 @@ void Autoline() //Функция запуска автолинии
   // считывание информации с пинов
   Datinfo_AL1 = digitalRead(Dat_L1);
   Datinfo_AR1 = digitalRead(Dat_R1);
+  Serial.print(Datinfo_AL1);
+  Serial.print('\t');
+  Serial.println(Datinfo_AR1);
   autoflag = 0;
-  if (data5 == 2000) {
+  if (data5 >= 1900) {
     if (Datinfo_AL1 == Datinfo_AR1)  // вперед
     {
       if (millis() - timingAW > 150) {
-        nowToward = millis();
-        while (millis() - nowToward < 50) {
-          motorR.smoothTick(-70);
-          motorL.smoothTick(-70);
+          motorR.smoothTick(-50);
+          motorL.smoothTick(-50);
           timingAW = millis();
-        }
-      }
+       }
     } else {
       if (Datinfo_AR1 == 0)  // вправо
       {
         if (millis() - timingAR > 100) {
-          nowRight = millis();
-          while (millis() - nowRight < 50) {
-            motorR.smoothTick(60);
-            motorL.smoothTick(-60);
+            motorR.smoothTick(50);
+            motorL.smoothTick(-50);
             timingAR = millis();
-          }
         }
       }
 
       if (Datinfo_AL1 == 0)  // влево
       {
         if (millis() - timingAL > 100) {
-          nowLeft = millis();
-          while (millis() - nowLeft < 50) {
-            motorR.smoothTick(-60);
-            motorL.smoothTick(60);
+            motorR.smoothTick(-50);
+            motorL.smoothTick(50);
             timingAL = millis();
-          }
         }
       }
     }
