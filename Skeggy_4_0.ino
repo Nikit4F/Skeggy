@@ -18,8 +18,11 @@ const byte overturn_Bpin = 42;  //Пин направления B перевор
 const byte overturn_pwm = 44;   //ШИМ пин
 int echoPin = 26;               // this pin recive echo, reflected audio signal
 int trigPin = 24;               // this pin generate audio signal
-int Dat_L1 = 2;                 //Пин левого ИК датчика
-int Dat_R1 = 3;                 //Пин правого ИК датчика
+int Dat_L1 = 3;                 //Пин левого ИК датчика
+int Dat_R1 = 2;                 //Пин правого ИК датчика
+int Dat_R2 = 17;
+int Dat_L2 = 14; 
+int hahaton = 1;
 
 //Мотор 1
 const int MOTOR_A1_PIN = 7;
@@ -54,6 +57,10 @@ unsigned long timingAW = millis();  //белый фон
 uint32_t nowToward = millis();
 uint32_t nowLeft = millis();
 uint32_t nowRight = millis();
+uint32_t manipulatorMainPlusTime;
+uint32_t manipulatorMainMinusTime;
+uint32_t manipulatorGrabPlusTime;
+uint32_t manipulatorGrabMinusTime;
 
 //MPU6050 переменные
 float angleX = 0;
@@ -80,13 +87,17 @@ int speed2;
 int Axis_rotation_angle;
 bool check = 0;          //флажок переворота
 bool autoline_flag = 1;  //флажок автолинии
-int angl = 180;
-int num = 90;
+int angl = 65;
+int num;
 int duration;  //variable for delay
 int cm;        //variable for distance
 bool flag = 0;
+bool grabFlag = 1;
+bool checkStopGrab = 0;
 int Datinfo_AL1 = 0;  //Данные с левого ИК датчика
 int Datinfo_AR1 = 0;  //Данные с правого ИК датчика
+int Datinfo_AL2 = 0;
+int Datinfo_AR2 = 0;
 int autoflag;
 int interruptPin = 19;  //Пин PPMReader
 int channelAmount = 8;  //Ожидаемое число каналов
@@ -96,6 +107,7 @@ Servo grab_servo;
 Servo main_servo;
 Servo servo1;
 Servo servo2;
+//Servo servoDat;
 
 //Инициализация драйверов
 GMotor overturn_motor(DRIVER3WIRE, overturn_Apin, overturn_Bpin, overturn_pwm, HIGH);
@@ -113,14 +125,19 @@ void setup() {
   pinMode(30, OUTPUT);
   pinMode(31, OUTPUT);
   pinMode(33, OUTPUT);
+  //pinMode(37, OUTPUT);
+  //Инициализация серв
   grab_servo.attach(32);
   main_servo.attach(30);
-  grab_servo.write(angl);
-  main_servo.write(65);
+  //servoDat.attach(37);
   servo1.attach(31);
   servo2.attach(33);
+  //Стартовое положение серв
+  grab_servo.write(90);
+  main_servo.write(angl);
   servo1.write(30);
   servo2.write(60);
+
 
   //Режим пинов
   pinMode(overturn_Apin, OUTPUT);
@@ -172,6 +189,9 @@ void loop() {
   //   Serial.println();
   //Serial.println(ultrasonicSensorStart(trigPin, echoPin));
 
+
+
+
   //Считывание значений с каналов
   data1 = ppm.latestValidChannelValue(1, 0);
   data2 = ppm.latestValidChannelValue(2, 0);
@@ -213,17 +233,18 @@ void loop() {
       Serial.println("Влево");
     }
   } else {
-    if (data1 > 1450 && data1 < 1550)  //стоп
+    if (data6 < 1100 && data1 > 1450 && data1 < 1550 && data5 < 1400 && data8 < 1600 && data7 > 1400 && data7 < 1600 )  //стоп
     {
-      motorR.smoothTick(0);
-      motorL.smoothTick(0);
+      stopMotors();
+      //motorR.smoothTick(0);
+      //motorL.smoothTick(0);
       // digitalWrite(MOTOR_A1_PIN, HIGH);
       // digitalWrite(MOTOR_B1_PIN, HIGH);
       // digitalWrite(MOTOR_A2_PIN, HIGH);
       // digitalWrite(MOTOR_B2_PIN, HIGH);
       // analogWrite(PWM_MOTOR_1, 0);
       // analogWrite(PWM_MOTOR_2, 0);
-      Serial.println("Стоп");
+      //Serial.println("Стоп");
     }
   }
 
@@ -241,14 +262,20 @@ void loop() {
    {
      mpuStart();
      if (degrees(ypr[2]) < -15) {
-       if (millis() - myTimer1 >= 200) {
+       //if (millis() - myTimer1 >= 200) {
          ObliqueDown();
          data6 = ppm.latestValidChannelValue(6, 0);
-         myTimer1 = millis();
-       }
-     } else {
-       motorR.smoothTick(0);
-       motorL.smoothTick(0);
+        // myTimer1 = millis();
+       //}
+     } else 
+     {
+      if (data2 < 1550)
+      {
+        //motorR.smoothTick(0);
+        //motorL.smoothTick(0);
+        stopMotors();
+        //Serial.println("Остановка наклонная");
+      }
      }
     }
 
@@ -256,14 +283,20 @@ void loop() {
   {
     mpuStart();
     if (degrees(ypr[2]) > 15) {
-      if (millis() - myTimer1 >= 200) {
+      //if (millis() - myTimer1 >= 200) {
         ObliqueUp();
         data6 = ppm.latestValidChannelValue(6, 0);
-        myTimer1 = millis();
+        //myTimer1 = millis();
+      //}
+    } else 
+    {
+      if (data2 < 1550)
+      {
+        //motorR.smoothTick(0);
+        //motorL.smoothTick(0);
+        stopMotors();
+       // Serial.println("Остановка наклонная");
       }
-    } else {
-      motorR.smoothTick(0);
-      motorL.smoothTick(0);
     }
   }
 
@@ -289,4 +322,27 @@ void loop() {
     servo2.write(60);
   }
 
+  if (data7 > 1400 && data7 < 1600) //ручное управление манипулятором
+  {  
+    //Serial.println("Ruki");
+    grabFlag = 1;
+    num = map(data3, 1000, 2000, 130, 10);
+    main_servo.write(num);
+  
+  if (data4 >= 1800) 
+    {
+      grab_servo.write(90);
+    }
+
+  if (data4 <= 1300) 
+    {
+      grab_servo.write(150);
+    }
+  }
+  else{
+  if (data7 == 1000)  //запуск автозахвата банки
+  {
+    autoGrab();
+  }
+  }
 }  //Конец лупа
